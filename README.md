@@ -1,135 +1,27 @@
-# Feedback Hub Admin Panel
+# Bug Reporter
 
-Panel administracyjny do zarządzania zgłoszeniami feedback z Twoich stron (ceea.org.pl, panel.ceea.org.pl i innych).
+Prywatny panel administracyjny do zarządzania zgłoszeniami błędów (bug reports) ze stron internetowych. Node.js + Express + EJS, dane przechowywane w Supabase.
 
-## Struktura projektu
+## Opis
 
-```
-feedback-hub-node/
-├── server.js           # Główny serwer Express
-├── package.json        # Zależności
-├── .env.example        # Szablon konfiguracji
-├── .gitignore
-└── views/
-    ├── layout.ejs      # Wspólny szablon HTML
-    ├── login.ejs       # Strona logowania
-    ├── dashboard.ejs   # Lista zgłoszeń
-    ├── detail.ejs      # Szczegóły zgłoszenia
-    └── error.ejs       # Strona błędu
-```
-
-## Wymagania
-
-- Node.js 18+
-- Konto Supabase z projektem `feedback-hub`
-- Projekt w Supabase musi mieć:
-  - Tabelę `feedback_reports` (z pliku `ceea-feedback-schema.sql`)
-  - Bucket `feedback-screenshots` w Storage
-  - Edge Function `feedback-submit` (do odbierania zgłoszeń)
-
-## Instalacja
-
-### 1. Zainstaluj zależności
-
-```bash
-cd feedback-hub-node
-npm install
-```
-
-### 2. Skonfiguruj zmienne środowiskowe
-
-```bash
-cp .env.example .env
-```
-
-Edytuj plik `.env`:
-
-```env
-# Supabase — dane z Settings → API w Supabase Studio
-SUPABASE_URL=https://twój-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...  # ⛔ Service Role Key (NIE anon key!)
-
-# Hasło dla administratorów (wszyscy 3 admini używają tego samego hasła)
-ADMIN_PASSWORD=TwojeMocneHaslo123!
-
-# Sekret do szyfrowania sesji (wpisz losowy ciąg, min. 32 znaki)
-SESSION_SECRET=losowy-ciąg-znaków-min-32-znaków-długości
-
-# Port (opcjonalnie)
-PORT=3000
-```
-
-**Gdzie znaleźć Service Role Key?**
-Supabase Studio → Project Settings → API → `service_role` secret (sekcja "Project API keys"). 
-
-⚠️ **UWAGA:** To jest tajny klucz — nigdy nie wysyłaj go do przeglądarki ani nie wrzucaj na GitHub!
-
-### 3. Uruchom serwer
-
-```bash
-# Tryb produkcyjny
-npm start
-
-# Tryb developerski (automatyczny restart przy zmianach)
-npm run dev
-```
-
-Otwórz w przeglądarce: **http://localhost:3000**
-
-Zaloguj się hasłem ustawionym w `ADMIN_PASSWORD`.
+Bug Reporter to osobisty system do przyjmowania, przeglądania i obsługi zgłoszeń błędów. Zgłoszenia trafiają do bazy z widgetu umieszczonego na stronach, a panel służy do ich weryfikacji, klasyfikacji i rozliczania — wszystko w jednym miejscu, z dostępem po haśle.
 
 ## Funkcjonalności
 
 - 📋 **Lista zgłoszeń** z paginacją (20 na stronę)
-- 🔍 **Filtry** po statusie, źródle, typie i priorytecie
-- 📊 **Statystyki** na żywo (ile nowych, w trakcie, rozwiązanych itp.)
-- 📸 **Podgląd zrzutów ekranu** z adnotacjami
-- ⚙️ **Zmiana statusu** i priorytetu
-- 📝 **Notatki wewnętrzne** dla adminów
-- 👤 **Przypisywanie** zgłoszeń do osób
-- 🗑️ **Usuwanie** zgłoszeń wraz z zrzutami z Storage
-
-## Wdrożenie na serwer (produkcja)
-
-### Opcja A: PM2 (zalecane)
-
-```bash
-npm install -g pm2
-pm2 start server.js --name feedback-hub
-pm2 save
-pm2 startup
-```
-
-### Opcja B: Docker
-
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
-```
-
-### Opcja C: Railway / Render / Heroku
-
-Projekt jest gotowy do wdrożenia na większości platform. Pamiętaj tylko o ustawieniu zmiennych środowiskowych w panelu platformy.
+- 🔍 **Filtry** po statusie, źródle, typie i priorytecie — szybkie odnajdywanie tego, co wymaga uwagi
+- 📊 **Statystyki na żywo** — liczba nowych, w trakcie i rozwiązanych zgłoszeń
+- 📸 **Podgląd zrzutów ekranu** z adnotacjami wysłanymi przez zgłaszającego
+- ⚙️ **Zmiana statusu i priorytetu** — prosty flow: nowe → w trakcie → rozwiązane
+- 📝 **Notatki wewnętrzne** — komentarze widoczne tylko dla adminów
+- 👤 **Przypisywanie zgłoszeń** do konkretnych osób
+- 🗑️ **Usuwanie zgłoszeń** wraz z automatycznym czyszczeniem zrzutów z Supabase Storage
+- 🔐 **Logowanie hasłem** z szyfrowanymi sesjami
 
 ## Bezpieczeństwo
 
-- ✅ Logowanie przez sesje (cookie szyfrowane)
-- ✅ Service Role Key nigdy nie wychodzi do przeglądarki
-- ✅ RLS w Supabase blokuje nieautoryzowany dostęp do danych
-- ✅ Hasło admina w zmiennej środowiskowej (nie w kodzie)
+- Service Role Key Supabase nigdy nie wychodzi do przeglądarki
+- Hasło administratora i wszystkie klucze trzymane wyłącznie w zmiennych środowiskowych
+- Plik `.env` wykluczony z repozytorium
 
-## Następne kroki
-
-1. Podłącz widget do `ceea.org.pl` i `panel.ceea.org.pl`
-2. Ustaw webhook Slacka w Edge Function
-3. Przetestuj cały flow: widget → Supabase → Slack → panel admina
-
----
-
-Masz pytania? Sprawdź plik `CEEA_INTEGRACJA.md` z głównego pakietu.
-# bug-reporter
+⚠️ Projekt prywatny — wyłącznie do użytku właściciela.

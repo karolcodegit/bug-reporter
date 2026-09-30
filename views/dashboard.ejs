@@ -1,0 +1,146 @@
+<%
+function buildUrl(key, val) {
+  // Ta funkcja jest używana tylko do budowania href w linkach paginacji (serwer)
+  var p = Object.assign({}, query);
+  if (val) p[key] = val; else delete p[key];
+  delete p.page;
+  return Object.keys(p).length ? '?' + Object.keys(p).map(k => k + '=' + encodeURIComponent(p[k])).join('&') : '';
+}
+
+locals.body = `
+<div class="container">
+  <h1 style="font-size: 24px; margin-bottom: 4px;">📋 Zgłoszenia</h1>
+  <p style="color: var(--text-secondary); margin-bottom: 24px;">
+    Łącznie: <strong>${count || 0}</strong> zgłoszeń
+  </p>
+
+  <!-- Statystyki -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--warning)">${statusCounts.new}</div>
+      <div class="stat-label">⏳ Nowe</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--primary)">${statusCounts.in_progress}</div>
+      <div class="stat-label">🔄 W trakcie</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--success)">${statusCounts.resolved}</div>
+      <div class="stat-label">✅ Rozwiązane</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--danger)">${statusCounts.rejected}</div>
+      <div class="stat-label">❌ Odrzucone</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: var(--text-secondary)">${statusCounts.closed}</div>
+      <div class="stat-label">🔒 Zamknięte</div>
+    </div>
+  </div>
+
+  <!-- Filtry -->
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="filters-bar">
+      <label>🔍 Filtruj:</label>
+      <select id="filter-status">
+        <option value="">Wszystkie statusy</option>
+        ${Object.entries(STATUS_LABELS).map(([v,l]) => `<option value="${v}" ${statusFilter===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <select id="filter-source">
+        <option value="">Wszystkie źródła</option>
+        <option value="website" ${sourceFilter==='website'?'selected':''}>🌐 Strona (ceea.org.pl)</option>
+        <option value="panel" ${sourceFilter==='panel'?'selected':''}>🔒 Panel (panel.ceea.org.pl)</option>
+      </select>
+      <select id="filter-type">
+        <option value="">Wszystkie typy</option>
+        ${Object.entries(TYPE_LABELS).map(([v,l]) => `<option value="${v}" ${typeFilter===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <select id="filter-priority">
+        <option value="">Wszystkie priorytety</option>
+        ${Object.entries(PRIORITY_LABELS).map(([v,l]) => `<option value="${v}" ${priorityFilter===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <a href="/" class="btn btn-outline btn-sm">🔄 Wyczyść</a>
+    </div>
+
+    <script>
+      // Filtry działają po stronie przeglądarki — budują URL z query params
+      function applyFilter(key, value) {
+        const params = new URLSearchParams(window.location.search);
+        if (value) params.set(key, value); else params.delete(key);
+        params.delete('page');
+        window.location.href = '/?' + params.toString();
+      }
+      document.getElementById('filter-status').addEventListener('change', e => applyFilter('status', e.target.value));
+      document.getElementById('filter-source').addEventListener('change', e => applyFilter('source', e.target.value));
+      document.getElementById('filter-type').addEventListener('change', e => applyFilter('type', e.target.value));
+      document.getElementById('filter-priority').addEventListener('change', e => applyFilter('priority', e.target.value));
+    </script>
+
+    ${reports.length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <h3>Brak zgłoszeń</h3>
+        <p>Gdy ktoś wyśle zgłoszenie przez widget, pojawi się tutaj.<br>Sprawdź też filtry powyżej.</p>
+      </div>
+    ` : `
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 140px">Status</th>
+            <th style="width: 180px">Typ</th>
+            <th>Tytuł</th>
+            <th style="width: 120px">Źródło</th>
+            <th style="width: 100px">Priorytet</th>
+            <th style="width: 160px">Data</th>
+            <th style="width: 80px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${reports.map(r => `
+            <tr>
+              <td>
+                <span class="badge" style="background: ${STATUS_COLORS[r.status] || '#999'}">
+                  ${STATUS_LABELS[r.status] || r.status}
+                </span>
+              </td>
+              <td>${TYPE_LABELS[r.type] || r.type}</td>
+              <td class="truncate" title="${r.title}">
+                ${r.screenshot_signed_url ? '📸 ' : ''}${r.title}
+              </td>
+              <td>${r.source === 'website' ? '🌐 Strona' : '🔒 Panel'}</td>
+              <td>${PRIORITY_LABELS[r.priority] || r.priority}</td>
+              <td style="font-size: 13px; color: var(--text-secondary)">
+                ${new Date(r.created_at).toLocaleString('pl-PL', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'})}
+              </td>
+              <td>
+                <a href="/report/${r.id}" class="btn btn-outline btn-sm">Otwórz</a>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      ${totalPages > 1 ? `
+        <div class="pagination">
+          ${page > 1 ? `<a href="/?page=${page-1}${buildUrl('status', statusFilter).replace('?', '&')}${buildUrl('source', sourceFilter).replace('?', '&')}${buildUrl('type', typeFilter).replace('?', '&')}${buildUrl('priority', priorityFilter).replace('?', '&')}" class="page-link">← Poprzednia</a>` : ''}
+
+          ${Array.from({length: totalPages}, (_, i) => i + 1).map(p => {
+            const active = p === page ? 'active' : '';
+            let href = '/?page=' + p;
+            if (statusFilter) href += '&status=' + encodeURIComponent(statusFilter);
+            if (sourceFilter) href += '&source=' + encodeURIComponent(sourceFilter);
+            if (typeFilter) href += '&type=' + encodeURIComponent(typeFilter);
+            if (priorityFilter) href += '&priority=' + encodeURIComponent(priorityFilter);
+            return `<a href="${href}" class="page-link ${active}">${p}</a>`;
+          }).join('')}
+
+          ${page < totalPages ? `<a href="/?page=${page+1}${buildUrl('status', statusFilter).replace('?', '&')}${buildUrl('source', sourceFilter).replace('?', '&')}${buildUrl('type', typeFilter).replace('?', '&')}${buildUrl('priority', priorityFilter).replace('?', '&')}" class="page-link">Następna →</a>` : ''}
+        </div>
+      ` : ''}
+    `}
+  </div>
+</div>
+`;
+locals.title = 'Zgłoszenia';
+%>
+<%- include('layout') %>

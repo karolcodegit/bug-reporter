@@ -1,0 +1,14 @@
+<%
+locals.body = `
+<div class="container" style="padding-top: 60px;">
+  <div class="card" style="padding: 40px; text-align: center;">
+    <div style="font-size: 56px; margin-bottom: 16px;">⚠️</div>
+    <h2 style="margin-bottom: 12px;">Wystąpił błąd</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">${message}</p>
+    <a href="/" class="btn btn-primary">Wróć do listy</a>
+  </div>
+</div>
+`;
+locals.title = 'Błąd';
+%>
+<%- include('layout') %>

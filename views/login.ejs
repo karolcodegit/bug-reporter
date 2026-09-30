@@ -1,0 +1,23 @@
+<%
+locals.body = `
+<div class="login-container">
+  <div class="card login-box">
+    <h1>🔐 Feedback Hub</h1>
+    <p>Panel administracyjny — zaloguj się</p>
+
+    ${error ? `<div class="alert alert-danger">${error}</div>` : ''}
+
+    <form method="POST" action="/login">
+      <div class="form-group">
+        <label>Hasło administratora</label>
+        <input type="password" name="password" class="form-control" placeholder="Wpisz hasło" required autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%">Zaloguj się</button>
+    </form>
+  </div>
+</div>
+`;
+locals.title = 'Logowanie';
+locals.hideNav = true;
+%>
+<%- include('layout') %>

@@ -1,0 +1,169 @@
+<%
+const escapeHtml = (text) => {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
+const formatDate = (d) => {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('pl-PL', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+locals.body = `
+<div class="container">
+  <div style="margin-bottom: 20px;">
+    <a href="/" class="btn btn-outline btn-sm">← Wróć do listy</a>
+  </div>
+
+  <div class="detail-grid">
+    <!-- LEWA KOLUMNA -->
+    <div style="min-width: 0;">
+      <!-- Główne info -->
+      <div class="card" style="padding: 24px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+          <span class="badge" style="background: ${STATUS_COLORS[report.status] || '#999'}; font-size: 12px; padding: 5px 12px;">
+            ${STATUS_LABELS[report.status] || report.status}
+          </span>
+          <span class="badge" style="background: #6366f1; font-size: 12px; padding: 5px 12px;">
+            ${TYPE_LABELS[report.type] || report.type}
+          </span>
+          <span style="color: var(--text-secondary); font-size: 12px; margin-left: auto; font-family: monospace; user-select: all;">
+            ${report.id}
+          </span>
+        </div>
+
+        <h1 style="font-size: 20px; margin-bottom: 16px; line-height: 1.35; word-break: break-word;">${report.title}</h1>
+
+        <!-- Opis -->
+        <div class="info-block">
+          <h4>📝 Opis</h4>
+          <div style="background: #f8fafc; border-radius: 8px; padding: 14px; border: 1px solid var(--border);">
+            <p style="margin: 0; line-height: 1.6; word-break: break-word; overflow-wrap: anywhere; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">
+              ${report.description ? escapeHtml(report.description) : '<em style="color: var(--text-secondary)">Brak opisu</em>'}
+            </p>
+          </div>
+        </div>
+
+        <!-- Szybkie info w grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+          <div class="info-block" style="margin-bottom: 0;">
+            <h4>🔗 Strona</h4>
+            <p style="margin: 0;"><a href="${escapeHtml(report.page_url)}" target="_blank" style="color: var(--primary); word-break: break-all; font-size: 13px;">${escapeHtml(report.page_url)}</a></p>
+          </div>
+          <div class="info-block" style="margin-bottom: 0;">
+            <h4>📱 Źródło</h4>
+            <p style="margin: 0; font-size: 14px;">${report.source === 'website' ? '🌐 Strona www' : '🔒 Panel administracyjny'}</p>
+          </div>
+          <div class="info-block" style="margin-bottom: 0;">
+            <h4>👤 Zgłaszający</h4>
+            <p style="margin: 0; font-size: 14px;">
+              ${report.reporter_email ? `<a href="mailto:${escapeHtml(report.reporter_email)}" style="color: var(--primary);">${escapeHtml(report.reporter_email)}</a>` : '<em style="color: var(--text-secondary)">Anonim</em>'}
+              ${report.reporter_name ? `<br><span style="font-size: 12px; color: var(--text-secondary)">${escapeHtml(report.reporter_name)}</span>` : ''}
+            </p>
+          </div>
+          <div class="info-block" style="margin-bottom: 0;">
+            <h4>📅 Data</h4>
+            <p style="margin: 0; font-size: 14px;">${formatDate(report.created_at)}</p>
+          </div>
+        </div>
+
+        ${report.resolved_at ? `
+        <div class="info-block" style="margin-top: 16px; margin-bottom: 0;">
+          <h4>✅ Rozwiązano</h4>
+          <p style="margin: 0; font-size: 14px;">${formatDate(report.resolved_at)}</p>
+        </div>
+        ` : ''}
+      </div>
+
+      <!-- Dane techniczne -->
+      <div class="card" style="padding: 24px;">
+        <h3 style="font-size: 15px; margin-bottom: 16px; display: flex; align-items: center; gap: 6px;">
+          🖥 Dane techniczne
+          <span style="font-size: 11px; color: var(--text-secondary); font-weight: 400;">(przeglądarka, system, rozdzielczość)</span>
+        </h3>
+
+        <div class="info-block" style="margin-bottom: 12px;">
+          <h4>Przeglądarka / System</h4>
+          <pre style="max-width: 100%; font-size: 11px; line-height: 1.5; padding: 12px; border-radius: 8px;">${escapeHtml(JSON.stringify(report.browser_info || {}, null, 2))}</pre>
+        </div>
+
+        ${report.console_logs && report.console_logs.length > 0 ? `
+        <div class="info-block" style="margin-bottom: 0;">
+          <h4>📋 Logi konsoli JS (${report.console_logs.length})</h4>
+          <pre style="max-width: 100%; font-size: 11px; line-height: 1.5; padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto;">${escapeHtml(JSON.stringify(report.console_logs, null, 2))}</pre>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+
+    <!-- PRAWA KOLUMNA -->
+    <div>
+      ${screenshotSignedUrl ? `
+      <div class="card" style="padding: 16px; margin-bottom: 20px;">
+        <h4 style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 10px;">
+          📸 Zrzut ekranu
+        </h4>
+        <a href="${screenshotSignedUrl}" target="_blank" style="display: block; border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
+          <img src="${screenshotSignedUrl}" style="width: 100%; display: block;" alt="Zrzut ekranu">
+        </a>
+        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 8px; text-align: center; margin-bottom: 0;">
+          Kliknij, aby powiększyć
+        </p>
+      </div>
+      ` : ''}
+
+      <div class="card" style="padding: 20px;">
+        <h3 style="font-size: 15px; margin-bottom: 16px;">⚙️ Zarządzaj</h3>
+
+        <form method="POST" action="/report/${report.id}/update">
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status" class="form-control">
+              ${Object.entries(STATUS_LABELS).map(([v,l]) => 
+                `<option value="${v}" ${report.status === v ? 'selected' : ''}>${l}</option>`
+              ).join('')}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Priorytet</label>
+            <select name="priority" class="form-control">
+              ${Object.entries(PRIORITY_LABELS).map(([v,l]) => 
+                `<option value="${v}" ${report.priority === v ? 'selected' : ''}>${l}</option>`
+              ).join('')}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Przypisane do</label>
+            <input type="text" name="assigned_to" class="form-control" value="${escapeHtml(report.assigned_to || '')}" placeholder="Imię osoby">
+          </div>
+
+          <div class="form-group">
+            <label>Notatki wewnętrzne</label>
+            <textarea name="admin_notes" class="form-control" rows="4" placeholder="Twoje notatki...">${escapeHtml(report.admin_notes || '')}</textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">
+            💾 Zapisz zmiany
+          </button>
+        </form>
+
+        <form method="POST" action="/report/${report.id}/delete" onsubmit="return confirm('Na pewno usunąć to zgłoszenie?')">
+          <button type="submit" class="btn btn-danger" style="width: 100%;">
+            🗑 Usuń zgłoszenie
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+locals.title = report.title;
+%>
+<%- include('layout') %>
